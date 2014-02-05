@@ -35,6 +35,7 @@ fi
 if [ -n "$BOOT2DOCKER_DATA" ]; then
 	PARTNAME=`echo "$BOOT2DOCKER_DATA" | sed 's/.*\///'`
 	mkdir -p /mnt/$PARTNAME
+	echo "mount $BOOT2DOCKER_DATA /mnt/$PARTNAME"
 	mount $BOOT2DOCKER_DATA /mnt/$PARTNAME
 
 	# Just in case, the links will fail if not
