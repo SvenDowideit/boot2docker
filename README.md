@@ -15,6 +15,12 @@ See [Frequently asked questions](doc/FAQ.md) for more details.
 
 ## Installation
 
+#### Microsoft Windows
+
+1. Install [VirtualBox](http://virtualbox.org)
+2. Download the [boot2docker-cli binary](http://github.com/boot2docker/boot2docker-cli/releases)
+3. Set the path that boot2docker-cli will use to to VBoxManage  ``Set BOOT2DOCKER_VBM=c:\Program Files\Oracle\VirtualBox\VBoxManage.exe``
+
 #### OSX
 ```
 $ brew update
