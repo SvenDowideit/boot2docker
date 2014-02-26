@@ -5,7 +5,14 @@
 : ${BOOT2DOCKER_PROFILE:=${BOOT2DOCKER_CFG_DIR}/profile}
 test -f "$BOOT2DOCKER_PROFILE" && . "$BOOT2DOCKER_PROFILE"
 : ${VM_NAME:=boot2docker-vm}
+
+#the script almost works on MINGW 
+if [ "$MSYSTEM" = "MINGW32 ]; then
+	VBM="c:\Program Files\Oracle\VirtualBox\VBoxManage.exe"
+fi
 : ${VBM:=VBoxManage}
+
+
 
 : ${DOCKER_PORT:=4243}
 : ${SSH_HOST_PORT:=2022}
@@ -20,12 +27,12 @@ test -f "$BOOT2DOCKER_PROFILE" && . "$BOOT2DOCKER_PROFILE"
 cmd_exists() {
     while [ -n "$1" ]
     do
-        command -v $1 >/dev/null 2>&1 || { echo >&2 "command '$1' is required but not installed.  Aborting."; notOK=1; [[ "$1" == "$VBM" ]] && echo "You need to install VirtualBox https://www.virtualbox.org!"; }
+        command -v $1 >/dev/null 2>&1 || { echo >&2 "command '$1' is required but not installed.  Aborting."; notOK=1; [[ "$1" == ""$VBM"" ]] && echo "You need to install VirtualBox https://www.virtualbox.org!"; }
         shift
     done
     [ -n "$notOK" ] && exit 1
 }
-cmd_exists bc nc curl grep head tr $VBM
+#cmd_exists bc nc curl grep head tr "$VBM"
 
 mkdir -p "${BOOT2DOCKER_CFG_DIR}"
 
@@ -57,7 +64,7 @@ log() {
 
 init() {
 
-    if `$VBM showvminfo $VM_NAME > /dev/null 2>&1`; then
+    if `"$VBM" showvminfo $VM_NAME > /dev/null 2>&1`; then
 	    echo "$VM_NAME Virtual Box vm already exists"
 	    exit 1
     fi
@@ -68,6 +75,7 @@ init() {
     case $unamestr in
         Linux) VM_CPUS=`nproc`;;
         Darwin) VM_CPUS=`sysctl -n hw.physicalcpu`;;
+	MINGW32_NT-6.2) VM_CPUS=1;;
         *) echo "$unamestr not yet supported - please raise an issue" ; exit 1
     esac
 
@@ -82,15 +90,15 @@ init() {
     fi
 
     log "Creating VM $VM_NAME"
-    $VBM createvm --name $VM_NAME --register
+    "$VBM" createvm --name $VM_NAME --register
 
     log "Setting VM settings"
     TXUX_SUPPORT=""
-    if $($VBM modifyvm|grep -q "\-\-vtxux"); then
+    if $("$VBM" modifyvm|grep -q "\-\-vtxux"); then
         TXUX_SUPPORT="--vtxux on"
     fi
 
-    if ! $VBM modifyvm $VM_NAME \
+    if ! "$VBM" modifyvm $VM_NAME \
         --ostype $VM_OSTYPE \
         --cpus $VM_CPUS \
         --memory $VM_MEM \
@@ -104,7 +112,10 @@ init() {
         --largepages on \
         --nestedpaging on \
         --firmware bios \
-        --bioslogofadein off --bioslogofadeout off --bioslogodisplaytime 0 --biosbootmenu disabled \
+        --bioslogofadein off \
+	--bioslogofadeout off \
+	--bioslogodisplaytime 0 \
+	--biosbootmenu disabled \
         --boot1 dvd; then
       echo "An error occured, upgrade VirtualBox or try to disable some options"
       delete
@@ -112,19 +123,19 @@ init() {
     fi
 
     log "Setting VM networking"
-    $VBM modifyvm $VM_NAME \
+    "$VBM" modifyvm $VM_NAME \
         --nic1 nat \
         --nictype1 $VM_NIC \
         --cableconnected1 on
-    if `$VBM showvminfo $VM_NAME | grep Rule | grep ssh > /dev/null`; then
-	    $VBM modifyvm $VM_NAME \
+    if `"$VBM" showvminfo $VM_NAME | grep Rule | grep ssh > /dev/null`; then
+	    "$VBM" modifyvm $VM_NAME \
         	--natpf1 delete "ssh"
     fi
-    if `$VBM showvminfo $VM_NAME | grep Rule | grep docker > /dev/null`; then
-	    $VBM modifyvm $VM_NAME \
+    if `"$VBM" showvminfo $VM_NAME | grep Rule | grep docker > /dev/null`; then
+	    "$VBM" modifyvm $VM_NAME \
         	--natpf1 delete "docker"
     fi
-    $VBM modifyvm $VM_NAME \
+    "$VBM" modifyvm $VM_NAME \
         --natpf1 "ssh,tcp,127.0.0.1,$SSH_HOST_PORT,,22" \
         --natpf1 "docker,tcp,127.0.0.1,$DOCKER_PORT,,4243"
 
@@ -134,18 +145,18 @@ init() {
     fi
 
     log "Setting VM disks"
-    if `$VBM showvminfo $VM_NAME | grep SATA > /dev/null`; then
-        $VBM storagectl $VM_NAME --name "SATA" --remove
+    if `"$VBM" showvminfo $VM_NAME | grep SATA > /dev/null`; then
+        "$VBM" storagectl $VM_NAME --name "SATA" --remove
     fi
 
     if [ ! -e "$VM_DISK" ]; then
         log "Creating $VM_DISK_SIZE Meg hard drive..."
-        echo "boot2docker, please format-me" | $VBM convertfromraw stdin "$VM_DISK" $(echo "$VM_DISK_SIZE * 1024 * 1024" | bc) --format VMDK
+        echo "boot2docker, please format-me" | "$VBM" convertfromraw stdin "$VM_DISK" $(echo "$VM_DISK_SIZE * 1024 * 1024" | bc) --format VMDK
     fi
 
-    $VBM storagectl $VM_NAME --name "SATA" --add sata --hostiocache on
-    $VBM storageattach $VM_NAME --storagectl "SATA" --port 0 --device 0 --type dvddrive --medium "$BOOT2DOCKER_ISO"
-    $VBM storageattach $VM_NAME --storagectl "SATA" --port 1 --device 0 --type hdd --medium "$VM_DISK"
+    "$VBM" storagectl $VM_NAME --name "SATA" --add sata --hostiocache on
+    "$VBM" storageattach $VM_NAME --storagectl "SATA" --port 0 --device 0 --type dvddrive --medium "$BOOT2DOCKER_ISO"
+    "$VBM" storageattach $VM_NAME --storagectl "SATA" --port 1 --device 0 --type hdd --medium "$VM_DISK"
 
     log "Done."
     log "You can now type boot2docker up and wait for the VM to start."
@@ -161,12 +172,12 @@ start() {
     if ! is_running; then
         if is_paused; then
             log "Resuming $VM_NAME"
-            $VBM controlvm $VM_NAME resume > /dev/null
+            "$VBM" controlvm $VM_NAME resume > /dev/null
             wait_vm
             log "Resumed."
         else
             log "Starting $VM_NAME..."
-            $VBM startvm $VM_NAME --type headless > /dev/null &
+            "$VBM" startvm $VM_NAME --type headless > /dev/null &
             wait_vm
             log "Started."
         fi
@@ -192,7 +203,7 @@ suspend() {
     is_installed || status
     if is_running; then
         log "Suspending $VM_NAME..."
-        $VBM controlvm $VM_NAME savestate > /dev/null
+        "$VBM" controlvm $VM_NAME savestate > /dev/null
     else
         log "$VM_NAME is not running."
     fi
@@ -202,7 +213,7 @@ stop() {
     is_installed || status
     if is_running; then
         log "Shutting down $VM_NAME..."
-        $VBM controlvm $VM_NAME acpipowerbutton > /dev/null
+        "$VBM" controlvm $VM_NAME acpipowerbutton > /dev/null
         while is_running; do
             sleep 1
         done
@@ -222,14 +233,14 @@ restart() {
 
 info() {
     if is_installed; then
-        $VBM showvminfo $VM_NAME
+        "$VBM" showvminfo $VM_NAME
     else
         echo "$VM_NAME does not exist."
     fi
 }
 
 is_installed() {
-    $VBM list vms | grep "$VM_NAME" > /dev/null
+    "$VBM" list vms | grep "$VM_NAME" > /dev/null
 }
 
 is_running() {
@@ -279,7 +290,7 @@ delete() {
         log "$VM_NAME needs to be stopped to delete it."
         exit 1
     fi
-    $VBM unregistervm --delete $VM_NAME
+    "$VBM" unregistervm --delete $VM_NAME
 }
 
 case $1 in
