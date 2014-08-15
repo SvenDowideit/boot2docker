@@ -43,6 +43,14 @@ RUN jobs=$(nproc); \
     make -j ${jobs} bzImage && \
     make -j ${jobs} modules
 
+# Build the BTRFS tools
+
+RUN git clone git://git.kernel.org/pub/scm/linux/kernel/git/mason/btrfs-progs.git && \
+    linux32 apt-get install -y uuid-dev libattr1-dev zlib1g-dev libacl1-dev e2fslibs-dev libblkid-dev liblzo2-dev  && \
+    linux32 apt-get install -y asciidoc xmlto --no-install-recommends && \
+    cd btrfs-progs && \
+    linux32 make
+
 # The post kernel build process
 
 ENV ROOTFS          /rootfs
@@ -60,6 +68,12 @@ ENV TCZ_DEPS        iptables \
 
 # Make the ROOTFS
 RUN mkdir -p $ROOTFS
+
+RUN mkdir -p $ROOTFS/sbin && \
+    cp /btrfs-progs/mkfs.btrfs $ROOTFS/sbin/ && \
+    cp /btrfs-progs/btrfs $ROOTFS/sbin/ && \
+    cp /btrfs-progs/btrfsck $ROOTFS/sbin/ && \
+    cp /btrfs-progs/btrfs-debug-tree $ROOTFS/sbin/
 
 # Install the kernel modules in $ROOTFS
 RUN cd /linux-kernel && \
