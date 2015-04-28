@@ -261,6 +261,7 @@ RUN find $ROOTFS/etc/rc.d/ $ROOTFS/usr/local/etc/init.d/ -exec chmod +x '{}' ';'
 RUN mv $ROOTFS/usr/local/etc/motd $ROOTFS/etc/motd
 
 # Dirty hack to make the bootscript add an environment file to the .ssh/ directory
+RUN echo "mkdir -p /home/docker/.ssh" >> $ROOTFS/bootscript.sh
 RUN echo "touch /home/docker/.ssh/environment" >> $ROOTFS/bootscript.sh
 RUN echo "echo \"PATH=/usr/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin\" >> /home/docker/.ssh/environment" >> $ROOTFS/bootscript.sh
 RUN echo "touch ./executed.log" >> $ROOTFS/bootscript.sh
@@ -278,7 +279,7 @@ RUN echo "#!/bin/sh" > $ROOTFS/usr/local/bin/autologin && \
 	echo "/bin/login -f docker" >> $ROOTFS/usr/local/bin/autologin && \
 	chmod 755 $ROOTFS/usr/local/bin/autologin && \
 	echo 'ttyS0:2345:respawn:/sbin/getty -l /usr/local/bin/autologin 9600 ttyS0 vt100' >> $ROOTFS/etc/inittab && \
-	echo 'ttyS1:2345:respawn:/sbin/getty -l /usr/local/bin/autologin 9600 ttyS0 vt100' >> $ROOTFS/etc/inittab
+	echo 'ttyS1:2345:respawn:/sbin/getty -l /usr/local/bin/autologin 9600 ttyS1 vt100' >> $ROOTFS/etc/inittab
 
 # fix "su -"
 RUN echo root > $ROOTFS/etc/sysconfig/superuser
