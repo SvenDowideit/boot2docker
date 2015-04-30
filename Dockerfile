@@ -1,4 +1,4 @@
-FROM debian:wheezy
+FROM debian:jessie
 MAINTAINER Steeve Morin "steeve.morin@gmail.com"
 
 #Change libc6-i386 by libc6. Future test might involve libc6-amd64
@@ -9,7 +9,7 @@ RUN apt-get update && apt-get -y install  unzip \
                         git \
                         build-essential \
                         cpio \
-                        gcc-multilib libc6 libc6-dev \
+                        gcc libc6 libc6-dev \
                         kmod \
                         squashfs-tools \
                         genisoimage \
@@ -176,9 +176,11 @@ RUN cd /vmtoolsd/open-vm-tools && \
     ./configure --disable-multimon --disable-docs --disable-tests --with-gnu-ld \
                 --without-kernel-modules --without-procps --without-gtk2 \
                 --without-gtkmm --without-pam --without-x --without-icu && \
-    make LIBS="-ltirpc" CFLAGS="-Wno-implicit-function-declaration" && \
-    make DESTDIR=$ROOTFS install &&\
-    libtool --finish /usr/local/lib
+    make LIBS="-ltirpc" CFLAGS="-Wno-implicit-function-declaration"
+RUN cd /vmtoolsd/open-vm-tools && \
+    make DESTDIR=$ROOTFS install
+RUN cd /vmtoolsd/open-vm-tools && \
+    ./libtool --finish /usr/local/lib
 
 # Kernel modules to build and install
 ENV VM_MODULES  vmhgfs

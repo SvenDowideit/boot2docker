@@ -1,0 +1,35 @@
+FROM boot2docker
+#FROM debian:jessie
+
+#RUN echo "deb-src http://httpredir.debian.org/debian jessie main" >> /etc/apt/sources.list
+#RUN echo "deb-src http://httpredir.debian.org/debian jessie-updates main" >> /etc/apt/sources.list
+#RUN echo "deb-src http://security.debian.org jessie/updates main" >> /etc/apt/sources.list
+
+RUN apt-get update
+
+#RUN apt-get install -yq audit-libs-devel bison bzip2-devel dbus-devel dbus-glib-devel flex flex-devel flex-static glib2-devel libcap-devel libcap-ng-devel pam-devel pcre-devel python-devel setools-devel swig ustr-devel
+
+#RUN apt-get build-dep -yq selinux-utils libsepol1-dev libsepol1 
+
+RUN apt-get install -yq make gcc git vim
+
+RUN apt-get install -yq bison flex libpcre3-dev libustr-dev libbz2-dev libaudit-dev
+RUN apt-get install -yq selinux-utils libsepol1-dev libsepol1 libselinux1-dev libsemanage1-dev libsefs-dev
+RUN apt-get install -yq libcap-ng-dev python-dev
+
+RUN git clone https://github.com/SELinuxProject/selinux
+WORKDIR /selinux
+RUN git checkout 20150202
+RUN mkdir -p /selinux/out/usr/include
+
+RUN apt-get install -yq gettext swig
+
+#RUN make DESTDIR=/selinux/out DISABLE_CIL=y install install-pywrap || true
+RUN make DESTDIR=/selinux/out DISABLE_CIL=n install install-pywrap
+
+RUN cp -r out/* $ROOTFS/
+RUN cp $(find / -name libpcre.so.3 2>/dev/null) $ROOTFS/lib/libpcre.so.3
+
+RUN /make_iso.sh
+
+CMD ["cat", "/boot2docker.iso"]
