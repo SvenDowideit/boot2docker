@@ -156,28 +156,31 @@ RUN mkdir -p /vboxguest && \
     cp amd64/lib/VBoxGuestAdditions/mount.vboxsf $ROOTFS/sbin/
 
 # Build VMware Tools
-ENV OVT_VERSION 9.4.6-1770165
+ENV OVT_VERSION 9.10.0
 
 # Download and prepare ovt source
-RUN mkdir -p /vmtoolsd/open-vm-tools \
-    && curl -L http://downloads.sourceforge.net/open-vm-tools/open-vm-tools-$OVT_VERSION.tar.gz \
-        | tar -xzC /vmtoolsd/open-vm-tools --strip-components 1
+#RUN mkdir -p /vmtoolsd/open-vm-tools \
+#    && curl -L https://github.com/vmware/open-vm-tools/archive/stable-$OVT_VERSION.tar.gz \
+#        | tar -xzC /vmtoolsd/open-vm-tools --strip-components 2
+# use fixes for post 3.19 kernels from https://github.com/davispuh/open-vm-tools/tree/fixed
+# rebased onto the 9.10.0 release
+ENV OVT_REPO       https://github.com/SvenDowideit/open-vm-tools
+ENV OVT_BRANCH     stable-9.10.x-davispuh-fixed
+RUN git clone $OVT_REPO \
+    && cd /open-vm-tools \
+    && git checkout $OVT_BRANCH \
+    && mv /open-vm-tools /vmtoolsd
 
-# Apply patches to make open-vm-tools compile with a recent 3.18.x kernel and
-# a network script that knows how to plumb/unplumb nics on a busybox system,
-# this will be removed once a new ovt version is released.
-RUN cd /vmtoolsd && \
-    curl -L -o open-vm-tools-3.x.x-patches.patch https://gist.github.com/frapposelli/5506651fa6f3d25d5760/raw/475f8fb2193549c10a477d506de40639b04fa2a7/open-vm-tools-3.x.x-patches.patch &&\
-    patch -p1 < open-vm-tools-3.x.x-patches.patch && rm open-vm-tools-3.x.x-patches.patch
-
-RUN apt-get install -y libfuse2 libtool autoconf libglib2.0-dev libdumbnet-dev libdumbnet1 libfuse2 libfuse-dev libglib2.0-0 libtirpc-dev libtirpc1
+RUN apt-get install -y libfuse2 libtool autoconf libglib2.0-dev libdumbnet-dev libdumbnet1 libfuse2 libfuse-dev libglib2.0-0 \
+       libtirpc-dev libtirpc1 libmspack-dev libssl-dev
 
 # Compile
 RUN cd /vmtoolsd/open-vm-tools && \
     autoreconf -i && \
     ./configure --disable-multimon --disable-docs --disable-tests --with-gnu-ld \
                 --without-kernel-modules --without-procps --without-gtk2 \
-                --without-gtkmm --without-pam --without-x --without-icu && \
+                --without-gtkmm --without-pam --without-x --without-icu \
+		--without-xerces --without-xmlsecurity --without-ssl && \
     make LIBS="-ltirpc" CFLAGS="-Wno-implicit-function-declaration" && \
     make DESTDIR=$ROOTFS install &&\
     /vmtoolsd/open-vm-tools/libtool --finish $ROOTFS/usr/local/lib
