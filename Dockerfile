@@ -238,6 +238,13 @@ RUN cd $ROOTFS && zcat /tcl_rootfs.gz | cpio -f -i -H newc -d --no-absolute-file
 # Copy our custom rootfs
 COPY rootfs/rootfs $ROOTFS
 
+# setup acpi config dir &
+# tcl6's sshd is compiled without `/usr/local/sbin` in the path
+# Boot2Docker and Docker Machine need `ip`, so I'm linking it in here
+RUN cd $ROOTFS \
+    && ln -s /usr/local/etc/acpi etc/ \
+    && ln -s /usr/local/sbin/ip usr/sbin/
+
 # Build the Hyper-V KVP Daemon
 RUN cd /linux-kernel && \
     make headers_install INSTALL_HDR_PATH=/usr && \
